@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+    integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+  <title>Convert excel to JSON Object</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.2/xlsx.full.min.js"></script>
+</head>
+
+<body>
+  <div class="container mt-5">
+    <div><h1>excel to JSON Object Quiz
+    </h1></div>
+    <div class="row">
+      <div class="col-md-3"></div>
+      <div class="col-md-3">
+        <input class="form-control" type="file" id="input" accept=".xls,.xlsx">
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-primary" id="button">Convert</button>
+      </div>
+    </div>
+    <div class="row mt-5">
+      <div class="col-md-12">
+        <h2 id="question"></h2>
+        <div id="options">
+          <button class="btn btn-secondary btn-block mt-2" id="optionA"></button>
+          <button class="btn btn-secondary btn-block mt-2" id="optionB"></button>
+          <button class="btn btn-secondary btn-block mt-2" id="optionC"></button>
+          <button class="btn btn-secondary btn-block mt-2" id="optionD"></button>
+        </div>
+        <button class="btn btn-primary mt-3" id="retryButton" style="display: none;">다시하기</button>
+      </div>
+    </div>
+  </div>
+</body>
+<script>
+let selectedFile;
+let rowObjectNew;
+
+document.getElementById('input').addEventListener("change", (event) => {
+  selectedFile = event.target.files[0];
+})
+
+document.getElementById('button').addEventListener("click", () => {
+  if(selectedFile){
+    let fileReader = new FileReader();
+    fileReader.readAsBinaryString(selectedFile);
+    fileReader.onload = (event)=>{
+      let data = event.target.result;
+      let workbook = XLSX.read(data,{type:"binary"});
+
+      let rowObject = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[workbook.SheetNames[0]]);
+      rowObjectNew = rowObject.map((column) => {
+        const newData = {
+          id: column.id,
+          problem: column.problem,
+          url: column.url,
+          options: {
+            a: column.a,
+            b: column.b,
+            c: column.c,
+            d: column.d,
+          },
+          rightAnswer: column.rightAnswer,
+          topico: column.topico,
+        }
+        return { ...newData };
+      });
+
+      startQuiz();
+    }
+  }
+});
+
+// 퀴즈 시작 함수
+function startQuiz() {
+  let currentQuestionIndex = 0;
+  let score = 0;
+
+  // 문제 출력 함수
+  function displayQuestion(question) {
+    document.getElementById("question").innerHTML = question.problem;
+    document.getElementById("optionA").innerHTML = question.options.a;
+    document.getElementById("optionB").innerHTML = question.options.b;
+    document.getElementById("optionC").innerHTML = question.options.c;
+    document.getElementById("optionD").innerHTML = question.options.d;
+  }
+
+  // 정답 확인 함수
+  function checkAnswer(userAnswer) {
+    const currentQuestion = rowObjectNew[currentQuestionIndex];
+    if (userAnswer === currentQuestion.rightAnswer) {
+      score++;
+    }
+    currentQuestionIndex++;
+    if (currentQuestionIndex < rowObjectNew.length) {
+      displayQuestion(rowObjectNew[currentQuestionIndex]);
+    } else {
+      document.getElementById("question").innerHTML = `Quiz completed. Your score: ${score}/${rowObjectNew.length}`;
+      document.getElementById("options").style.display = "none";
+      document.getElementById("retryButton").style.display = "inline-block";
+    }
+  }
+
+  // 선택지 클릭 이벤트 처리 함수
+  function handleOptionClick(option) {
+    return function() {
+      checkAnswer(option);
+    }
+  }
+
+  // 첫 번째 문제 출력
+  displayQuestion(rowObjectNew[currentQuestionIndex]);
+
+  // 선택지 클릭 이벤트 처리
+  document.getElementById("optionA").addEventListener("click", handleOptionClick("A"));
+  document.getElementById("optionB").addEventListener("click", handleOptionClick("B"));
+  document.getElementById("optionC").addEventListener("click", handleOptionClick("C"));
+  document.getElementById("optionD").addEventListener("click", handleOptionClick("D"));
+}
+
+// 다시하기 버튼 클릭 이벤트 처리
+document.getElementById("retryButton").addEventListener("click", () => {
+  document.getElementById("retryButton").style.display = "none";
+  document.getElementById("options").style.display = "block";
+  startQuiz();
+});
+</script>
+</html>
